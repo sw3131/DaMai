@@ -1,30 +1,15 @@
-from flask import Flask, request, render_template, send_file
+import streamlit as st
 import pandas as pd
-import os
 
-app = Flask(__name__)
+# 设置页面标题
+st.title("月环比分析工具")
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+# 文件上传
+uploaded_file = st.file_uploader("上传Excel文件", type=["xlsx"])
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return "没有文件上传", 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return "未选择文件", 400
-
-    # 保存文件
-    file_path = os.path.join('uploads', file.filename)
-    file.save(file_path)
-
-    return analyze_file(file_path)
-
-def analyze_file(file_path):
-    df = pd.read_excel(file_path)
+if uploaded_file is not None:
+    # 读取Excel文件
+    df = pd.read_excel(uploaded_file)
     df['下单时间'] = pd.to_datetime(df['下单时间'])
     df['月份'] = df['下单时间'].dt.to_period('M')
     latest_month = df['月份'].max()
@@ -42,15 +27,16 @@ def analyze_file(file_path):
                 pivot_table = pivot_table.reset_index().sort_values(by='环比', ascending=False)
                 results[column_name] = pivot_table
 
-    # 保存结果到Excel
-    result_file = 'analysis_result.xlsx'
-    with pd.ExcelWriter(result_file) as writer:
-        for key, value in results.items():
-            value.to_excel(writer, sheet_name=key, index=False)
+    # 显示分析结果
+    for key, value in results.items():
+        st.subheader(key)
+        st.dataframe(value)
 
-    return send_file(result_file, as_attachment=True)
-
-if __name__ == "__main__":
-    if not os.path.exists('uploads'):
-        os.makedirs('uploads')
-    app.run(debug=True)
+    # 下载按钮
+    if st.button("下载分析结果"):
+        result_file = "analysis_result.xlsx"
+        with pd.ExcelWriter(result_file) as writer:
+            for key, value in results.items():
+                value.to_excel(writer, sheet_name=key, index=False)
+        with open(result_file, "rb") as file:
+            st.download_button("下载", file, result_file)
