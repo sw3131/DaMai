@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # 设置页面标题
-st.title("月环比分析工具")
+st.title("大麦-数据与策略-月环比智能")
 
 # 文件上传
 uploaded_file = st.file_uploader("上传Excel文件", type=["xlsx"])
